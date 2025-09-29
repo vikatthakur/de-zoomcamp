@@ -1,22 +1,37 @@
-# Use the official Python image from the Docker Hub
-FROM python:3.9-slim
-# Set the working directory in the container
-WORKDIR /app
-# Copy the current directory contents into the container at /app
-COPY etl_postgres.py etl_postgres.py
-COPY requirements.txt requirements.txt
-# Install any needed packages specified in requirements.txt
-# Install wget (or any system packages you need)
-# Install Java 8, wget, and ps
-RUN apt-get update && \
-    apt-get install -y openjdk-8-jdk wget procps && \
-    rm -rf /var/lib/apt/lists/*
-RUN pip install --no-cache-dir -r requirements.txt
+FROM openjdk:8-jdk
 
-ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+# Install Python 3.9, pip, and utilities
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    wget \
+    curl \
+    procps \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set python3 as default
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1
+
+# Set JAVA_HOME explicitly (for PySpark)
+ENV JAVA_HOME=/usr/local/openjdk-8
 ENV PATH=$JAVA_HOME/bin:$PATH
 
+WORKDIR /app
+
+COPY requirements.txt requirements.txt
+COPY etl_postgres.py etl_postgres.py
+COPY postgresql-42.7.4.jar postgresql-42.7.4.jar
+COPY data/ data/
+
+# Upgrade pip and install Python deps
+# Download PostgreSQL JDBC driver
+# RUN wget https://jdbc.postgresql.org/download/postgresql-42.7.4.jar -O /app/postgresql-42.7.4.jar
+
+RUN python -m pip install --upgrade pip
+RUN pip install --no-cache-dir -r requirements.txt
+
 ENTRYPOINT ["python", "etl_postgres.py"]
+
 
 #Run postgres container
 # docker run -d \ 
@@ -40,4 +55,5 @@ ENTRYPOINT ["python", "etl_postgres.py"]
 
 # # build docker image and run for etl_postgres.py
 # docker build -t etl_postgres:v001 .
-# docker run -it --rm --network pg_network etl_postgres:v001 --username=root --password=root --host=localhost --port=5432 --database=ny_taxi
+# docker run -it --rm --network pg_network etl_postgres:v001 --username=root --password=root --host=postgres --port=5432 --database=ny_taxi
+
