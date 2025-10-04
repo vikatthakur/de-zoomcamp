@@ -25,6 +25,8 @@ def main(params):
         host = "localhost"
         port = 5432
         database = "ny_taxi"
+        url = ${url}
+        table = "yellow_taxi_trips"
     '''
     start_time = time()
     username = params.username
@@ -32,12 +34,14 @@ def main(params):
     host = params.host
     port = params.port
     database = params.database
+    url = params.url
+    table = params.table
 
     output_file_path = "data/output.parquet"
 
     # download parquet file
     os.system(
-        f"wget https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2023-02.parquet -O {output_file_path}"
+        f"wget {url} -O {output_file_path}"
     )
 
     spark = (
@@ -58,7 +62,7 @@ def main(params):
     df.write \
       .format("jdbc") \
       .option("url", f"jdbc:postgresql://{host}:{port}/{database}") \
-      .option("dbtable", "yellow_taxi_trips") \
+      .option("dbtable", table) \
       .option("user", username) \
       .option("password", password) \
       .option("driver", "org.postgresql.Driver") \
@@ -80,6 +84,8 @@ if __name__ == "__main__":
     argparser.add_argument("--host", help="host for postgres", default="localhost")
     argparser.add_argument("--port", help="port for postgres", default=5432)
     argparser.add_argument("--database", help="database for postgres", default="ny_taxi")
+    argparser.add_argument("--url", help="data url", default="")
+    argparser.add_argument("--table", help="table name", default="yellow_taxi_trips")
     args = argparser.parse_args()
     main(args)
 
